@@ -1,8 +1,25 @@
 require 'crack/xml'
 require 'csv'
+require 'bigdecimal'
 
 def bankers_round(n)
-  return n.round(2)
+  #This is the method that supposedly has the bug
+  #BigDecimal(n.to_s).round(2, BigDecimal::ROUND_HALF_EVEN)
+
+  #The currently active method below is modified from https://gist.github.com/1053857
+  cents = BigDecimal(n.to_s) * BigDecimal("100")
+  remainder = cents % BigDecimal("1")
+  if remainder == BigDecimal("0")
+    n
+  elsif remainder < BigDecimal("0.5")
+    BigDecimal(n.to_s).round(2, BigDecimal::ROUND_DOWN)
+  elsif remainder > BigDecimal("0.5")
+    BigDecimal(n.to_s).round(2, BigDecimal::ROUND_UP)
+  elsif cents.even?
+    BigDecimal(n.to_s).round(2, BigDecimal::ROUND_DOWN)
+  else
+    BigDecimal(n.to_s).round(2, BigDecimal::ROUND_UP)
+  end
 end
 
 def convert(functional, parent, fx, cross_curr)
@@ -32,7 +49,7 @@ fx_rates.each do |index|
 	fx[key] = c
 end
 
-fx["AUDUSD"] = bankers_round(fx["AUDCAD"] * fx["AUDCAD"])
+fx["AUDUSD"] = fx["AUDCAD"] * fx["AUDCAD"]
 #fx["EURUSD"] = fx["EURAUD"] * fx["AUDUSD"]
 #Uncomment for final
 #Also fix bankers round
