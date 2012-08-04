@@ -1,34 +1,7 @@
 require 'crack/xml'
 require 'csv'
 require 'bigdecimal'
-
-def bankers_round(n, deg)
-  #This is the method that supposedly has the bug
-  foo = BigDecimal(n.to_s).round(deg, BigDecimal::ROUND_HALF_EVEN)
-  foo.to_f
-  #The currently active method below is modified from https://gist.github.com/1053857
-  #cents = BigDecimal(n.to_s) * BigDecimal("100")
-  #remainder = cents % BigDecimal("1")
-  #if remainder == BigDecimal("0")
-  #  n
-  #elsif remainder < BigDecimal("0.5")
-  #  BigDecimal(n.to_s).round(deg, BigDecimal::ROUND_DOWN)
-  #elsif remainder > BigDecimal("0.5")
-  #  BigDecimal(n.to_s).round(deg, BigDecimal::ROUND_UP)
-  #elsif cents.even?
-  #  BigDecimal(n.to_s).round(deg, BigDecimal::ROUND_DOWN)
-  #else
-  #  BigDecimal(n.to_s).round(deg, BigDecimal::ROUND_UP)
-  #end
-end
-
-def convert(functional, parent, fx, cross_curr)
-  functional.each do |trans|
-    foo = (trans * fx[cross_curr])
-    converted = bankers_round(foo, 2)
-    parent << converted
-  end
-end
+require './processor'
 
 #This section changes the fx rates to something manageable
 
@@ -60,13 +33,7 @@ trans = CSV.foreach("TRANS.csv") do |row|
 end
 
 #This section filters for all transactions
-trans_sku = []
-
-trans_array.each do |row|
-	if row.include? ("DM1182")
-		trans_sku << row.last.split(' ')
-  end
-end
+trans_sku = filter(trans_array, "DM1182")
 
 trans_sku.each do |row|
   row = row.first.to_f
@@ -99,11 +66,7 @@ convert(CAD, USD, fx, "CADUSD")
 #Add the USD transactions together
 sum = USD.inject(0) { |sum, x| sum + x}
 sum = bankers_round(sum, 2)
-
-#puts USD.to_s
 puts sum
-#print '134.22'
-#print was a check for sample rates
 
 #Write file solution
 File.open('OUTPUT.txt', 'w') {|f| f.write(sum) }
